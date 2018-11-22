@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html>
-    <head>
+
+<head>
     <meta charset="utf-8">
     <title>ClusterPies</title>
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
     <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css' rel='stylesheet' />
     <link rel="stylesheet" href="css/clusterpies.css" />
-  </head>
-  <body>
-  <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js" charset="utf-8"></script>
-  <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
-  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+</head>
+
+<body>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js" charset="utf-8"></script>
+    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 
     <div id="container">
         <div id="map" />
@@ -19,7 +21,9 @@
         "use strict"
         var geojson,
             metadata,
-            geojsonPath = "geojson/montreal_airbnb.geojson",
+            geojsonAirbnbPath = "geojson/montreal_airbnb.geojson",
+            geojsonNbPath = "geojson/neighbourhoods.geojson",
+            geojsonNb,
             categoryField = 'room_type', //This is the fieldname for marker category (used in the pie and legend)
             // iconField = 'room_id', //This is the fieldame for marker icon
             popupFields = ['room_id', 'host_id', 'room_type', 'borough', 'neighborhood', 'reviews', 'overall_satisfaction', 'accommodates', 'bedrooms', 'price', 'minstay', 'last_modified'], //Popup will display these fields
@@ -30,18 +34,73 @@
                 maxClusterRadius: 2 * rmax,
                 iconCreateFunction: defineClusterIcon //this is where the magic happens
             }),
-            map = L.map('map').setView([45.5017, -73.5673], 11);
+            map = L.map('map').setView([45.5017, -73.5673], 10);
 
         //Add basemap
         L.tileLayer(tileServer, {
             attribution: tileAttribution,
             maxZoom: 15
         }).addTo(map);
+
+        //Add neighborhood layer
+        d3.json(geojsonNbPath, function(error, data) {
+            if (!error) {
+                geojsonNb = L.geoJson(data, {
+                    style: style,
+                    onEachFeature: onEachFeatureNb
+                }).addTo(map);
+            } else {
+                console.log('Could not load data...');
+            }
+        });
+
+        function style(feature) {
+            return {
+                fillColor: 'lightblue',
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.5
+            };
+        }
+
+        function highlightFeature(e) {
+            var layer = e.target;
+
+            layer.setStyle({
+                weight: 5,
+                color: '#666',
+                dashArray: '',
+                fillOpacity: 0.5
+            });
+
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
+        }
+
+        function resetHighlight(e) {
+            geojsonNb.resetStyle(e.target);
+        }
+
+        function zoomToFeature(e) {
+            map.fitBounds(e.target.getBounds());
+        }
+
+        function onEachFeatureNb(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: zoomToFeature
+            });
+        }
+
         //and the empty markercluster layer
         map.addLayer(markerclusters);
 
         //Ready to go, load the geojson
-        d3.json(geojsonPath, function(error, data) {
+        d3.json(geojsonAirbnbPath, function(error, data) {
             if (!error) {
                 geojson = data;
                 metadata = data.properties;
