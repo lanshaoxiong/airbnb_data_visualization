@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+    <head>
     <meta charset="utf-8">
     <title>ClusterPies</title>
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
     <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css' rel='stylesheet' />
-    <link rel="stylesheet" href="clusterpies.css" />
-</head>
-
-<body>
-    <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js" charset="utf-8"></script>
-    <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
-    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="css/clusterpies.css" />
+  </head>
+  <body>
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js" charset="utf-8"></script>
+  <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
+  <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 
     <div id="container">
         <div id="map" />
@@ -21,7 +19,7 @@
         "use strict"
         var geojson,
             metadata,
-            geojsonPath = 'montreal_airbnb.geojson',
+            geojsonPath = "geojson/montreal_airbnb.geojson",
             categoryField = 'room_type', //This is the fieldname for marker category (used in the pie and legend)
             // iconField = 'room_id', //This is the fieldame for marker icon
             popupFields = ['room_id', 'host_id', 'room_type', 'borough', 'neighborhood', 'reviews', 'overall_satisfaction', 'accommodates', 'bedrooms', 'price', 'minstay', 'last_modified'], //Popup will display these fields
