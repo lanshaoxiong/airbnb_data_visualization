@@ -6,7 +6,7 @@
     <title>ClusterPies</title>
     <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
     <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/MarkerCluster.css' rel='stylesheet' />
-    <link rel="stylesheet" href="css/clusterpies.css" />
+    <link rel="stylesheet" href="css/montreal.css" />
 </head>
 
 <body>
@@ -16,8 +16,16 @@
 
     <div id="container">
         <div id="map" />
+        <div id="filtermodule">
+            <select class="filter" id="nbfilter" />
+        </div>
+
     </div>
+
+
+
     <script type="text/javascript">
+        // map module
         "use strict"
         var geojson,
             metadata,
@@ -290,4 +298,26 @@
             }
             return "";
         }
+
+        // filter module
+        var data = ["Outremont", "LaSalle", "Mont-Royal",
+         ""];
+
+        var nbfilter = d3.select('#nbfilter')
+            .on('change', onchange)
+
+        var options = nbfilter
+            .selectAll('option')
+            .data(data).enter()
+            .append('option')
+            .text(function(d) {
+                return d;
+            });
+
+        function onchange() {
+            selectValue = d3.select("#nbfilter").property('value')
+            d3.select('body')
+                .append('p')
+                .text(selectValue + ' is the last selected option.')
+        };
     </script>

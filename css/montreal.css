@@ -130,3 +130,13 @@
 .map-popup span.label {
   font-weight: bold;
 }
+
+/* select */
+
+#filtermodule {
+  width:300px;
+  height:200px;
+  position: absolute;
+  right: 0;
+
+}
