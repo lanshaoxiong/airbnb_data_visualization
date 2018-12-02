@@ -323,33 +323,6 @@
             return serializeXmlNode(svg);
         }
 
-        /*Function for generating a legend with the same categories as in the clusterPie*/
-        // function renderLegend() {
-        //     var data = d3.entries(metadata.fields[categoryField].lookup),
-        //         legenddiv = d3.select('body').append('div')
-        //         .attr('id', 'legend');
-
-        //     var heading = legenddiv.append('div')
-        //         .classed('legendheading', true)
-        //         .text(metadata.fields[categoryField].name);
-
-        //     var legenditems = legenddiv.selectAll('.legenditem')
-        //         .data(data);
-
-        //     legenditems
-        //         .enter()
-        //         .append('div')
-        //         .attr('class', function (d) {
-        //             return 'category-' + d.key;
-        //         })
-        //         .classed({
-        //             'legenditem': true
-        //         })
-        //         .text(function (d) {
-        //             return d.value;
-        //         });
-        // }
-
         /*Helper function*/
         function serializeXmlNode(xmlNode) {
             if (typeof window.XMLSerializer != "undefined") {
