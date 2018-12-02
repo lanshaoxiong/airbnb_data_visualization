@@ -92950,7 +92950,7 @@
                 "name": "last_modified"
             }
         },
-        "attribution": "Traffic accidents: <a href=\"http://data.norge.no/data/nasjonal-vegdatabank-api\" target=\"blank\">NVDB</a>",
-        "description": "Traffic accidents in 2013 in Oslo, Norway"
+        "attribution": "",
+        "description": ""
     }
 }
