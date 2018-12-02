@@ -16,13 +16,15 @@
 
     <div id="container">
         <div id="map" />
-        <div id="filtermodule">
-            <select class="filter" id="nbfilter" />
-        </div>
-
     </div>
 
-
+    <form id="dimensions">
+        <input type='radio' id="normal" value="normal" name="mode" checked>Normal</input>
+        <input type='radio' id="listing" value="listing" name="mode">Listing</input>
+        <input type='radio' id="price" value="price" name="mode">Price</input>
+        <input type='radio' id="review" value="review" name="mode">Reviews</input>
+        <input type='radio' id="rate" value="rate" name="mode">Rate</input>
+    </form>
 
     <script type="text/javascript">
         // map module
@@ -31,10 +33,17 @@
             metadata,
             geojsonAirbnbPath = "geojson/montreal_airbnb.geojson",
             geojsonNbPath = "geojson/neighbourhoods.geojson",
-            geojsonNb,
+            normalLayer,
+            listingLayer,
+            priceLayer,
+            reviewLayer,
+            rateLayer,
+            currentLayer,
             categoryField = 'room_type', //This is the fieldname for marker category (used in the pie and legend)
             // iconField = 'room_id', //This is the fieldame for marker icon
-            popupFields = ['room_id', 'host_id', 'room_type', 'borough', 'neighborhood', 'reviews', 'overall_satisfaction', 'accommodates', 'bedrooms', 'price', 'minstay', 'last_modified'], //Popup will display these fields
+            popupFields = ['room_id', 'host_id', 'room_type', 'borough', 'neighborhood', 'reviews',
+                'overall_satisfaction', 'accommodates', 'bedrooms', 'price', 'minstay', 'last_modified'
+            ], //Popup will display these fields
             tileServer = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
             tileAttribution = 'Map data: <a href="http://openstreetmap.org">OSM</a>',
             rmax = 30, //Maximum radius for cluster pies
@@ -44,19 +53,30 @@
             }),
             map = L.map('map').setView([45.5017, -73.5673], 10);
 
+        // the hashmap to store number of listing, avgPrice, avgReviews, avgRates for each neighborhood.
+        var airbnbByNbMap = new Object();
+        var info = L.control();
+        var legend = L.control({
+            position: 'bottomright'
+        });
+
         //Add basemap
         L.tileLayer(tileServer, {
             attribution: tileAttribution,
             maxZoom: 15
         }).addTo(map);
 
-        //Add neighborhood layer
-        d3.json(geojsonNbPath, function(error, data) {
+        // ================  set up normal neighborhood layer ======================================
+
+        //Add normal neighborhood layer
+        d3.json(geojsonNbPath, function (error, data) {
             if (!error) {
-                geojsonNb = L.geoJson(data, {
+                normalLayer = L.geoJson(data, {
                     style: style,
                     onEachFeature: onEachFeatureNb
                 }).addTo(map);
+                currentLayer = normalLayer;
+                console.log(Object.keys(airbnbByNbMap).length)
             } else {
                 console.log('Could not load data...');
             }
@@ -80,16 +100,18 @@
                 weight: 5,
                 color: '#666',
                 dashArray: '',
-                fillOpacity: 0.5
+                fillOpacity: 0.7
             });
 
             if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
                 layer.bringToFront();
             }
+            info.update(layer.feature.properties);
         }
 
         function resetHighlight(e) {
-            geojsonNb.resetStyle(e.target);
+            currentLayer.resetStyle(e.target);
+            info.update();
         }
 
         function zoomToFeature(e) {
@@ -97,6 +119,15 @@
         }
 
         function onEachFeatureNb(feature, layer) {
+            airbnbByNbMap[feature.properties.neighbourhood] = {
+                "numListing": 0,
+                "totalReviews": 0,
+                "totalRates": 0.0,
+                "totalPrices": 0.0,
+                "avgReviews": 0.0,
+                "avgRates": 0.0,
+                "avgPrices": 0.0
+            };
             layer.on({
                 mouseover: highlightFeature,
                 mouseout: resetHighlight,
@@ -104,11 +135,13 @@
             });
         }
 
+        // ================  set up marker cluster layer ======================================
+
         //and the empty markercluster layer
         map.addLayer(markerclusters);
 
         //Ready to go, load the geojson
-        d3.json(geojsonAirbnbPath, function(error, data) {
+        d3.json(geojsonAirbnbPath, function (error, data) {
             if (!error) {
                 geojson = data;
                 metadata = data.properties;
@@ -119,13 +152,28 @@
                 markerclusters.addLayer(markers);
                 map.fitBounds(markers.getBounds());
                 map.attributionControl.addAttribution(metadata.attribution);
-                renderLegend();
+                // renderLegend();
+                Object.keys(airbnbByNbMap).forEach(nb => {
+                    if (airbnbByNbMap[nb]["numListing"] > 0) {
+                        airbnbByNbMap[nb]["avgReviews"] = (airbnbByNbMap[nb]["totalReviews"] /
+                            airbnbByNbMap[nb]["numListing"]).toFixed(2);
+                        airbnbByNbMap[nb]["avgRates"] = (airbnbByNbMap[nb]["totalRates"] /
+                            airbnbByNbMap[nb]["numListing"]).toFixed(2);
+                        airbnbByNbMap[nb]["avgPrices"] = (airbnbByNbMap[nb]["totalPrices"] /
+                            airbnbByNbMap[nb]["numListing"]).toFixed(2);
+                    }
+                });
+                console.log(airbnbByNbMap);
+                setChoroplethLayer();
+                setInfoControlPanel();
+                setLegendControl();
             } else {
                 console.log('Could not load data...');
             }
         });
 
         function defineFeature(feature, latlng) {
+            storeDataByNb(feature);
             var categoryVal = feature.properties[categoryField];
             // iconVal = feature.properties[iconField];
             // var myClass = 'marker category-'+categoryVal+' icon-'+iconVal;
@@ -139,20 +187,27 @@
             });
         }
 
+        function storeDataByNb(feature) {
+            airbnbByNbMap[feature.properties.neighborhood]["numListing"]++;
+            airbnbByNbMap[feature.properties.neighborhood]["totalReviews"] += feature.properties.reviews;
+            airbnbByNbMap[feature.properties.neighborhood]["totalRates"] += feature.properties.overall_satisfaction;
+            airbnbByNbMap[feature.properties.neighborhood]["totalPrices"] += feature.properties.price;
+        }
 
         function defineFeaturePopup(feature, layer) {
             var props = feature.properties,
                 fields = metadata.fields,
                 popupContent = '';
 
-            popupFields.map(function(key) {
+            popupFields.map(function (key) {
                 if (props[key]) {
                     var val = props[key],
                         label = fields[key].name;
                     if (fields[key].lookup) {
                         val = fields[key].lookup[val];
                     }
-                    popupContent += '<span class="attribute"><span class="label">' + label + ':</span> ' + val + '</span>';
+                    popupContent += '<span class="attribute"><span class="label">' + label + ':</span> ' + val +
+                        '</span>';
                 }
             });
             popupContent = '<div class="map-popup">' + popupContent + '</div>';
@@ -168,14 +223,14 @@
                 r = rmax - 2 * strokeWidth - (n < 10 ? 12 : n < 100 ? 8 : n < 1000 ? 4 : 0), //Calculate clusterpie radius...
                 iconDim = (r + strokeWidth) * 2, //...and divIcon dimensions (leaflet really want to know the size)
                 data = d3.nest() //Build a dataset for the pie chart
-                .key(function(d) {
+                .key(function (d) {
                     return d.feature.properties[categoryField];
                 })
                 .entries(children, d3.map),
                 //bake some svg markup
                 html = bakeThePie({
                     data: data,
-                    valueFunc: function(d) {
+                    valueFunc: function (d) {
                         return d.values.length;
                     },
                     strokeWidth: 1,
@@ -184,11 +239,12 @@
                     pieClass: 'cluster-pie',
                     pieLabel: n,
                     pieLabelClass: 'marker-cluster-pie-label',
-                    pathClassFunc: function(d) {
+                    pathClassFunc: function (d) {
                         return "category-" + d.data.key;
                     },
-                    pathTitleFunc: function(d) {
-                        return metadata.fields[categoryField].lookup[d.data.key] + ' (' + d.data.values.length + ' accident' + (d.data.values.length != 1 ? 's' : '') + ')';
+                    pathTitleFunc: function (d) {
+                        return metadata.fields[categoryField].lookup[d.data.key] + ' (' + d.data.values.length +
+                            ' accident' + (d.data.values.length != 1 ? 's' : '') + ')';
                     }
                 }),
                 //Create a new divIcon and assign the svg markup to the html property
@@ -211,10 +267,10 @@
                 r = options.outerRadius ? options.outerRadius : 28, //Default outer radius = 28px
                 rInner = options.innerRadius ? options.innerRadius : r - 10, //Default inner radius = r-10
                 strokeWidth = options.strokeWidth ? options.strokeWidth : 1, //Default stroke is 1
-                pathClassFunc = options.pathClassFunc ? options.pathClassFunc : function() {
+                pathClassFunc = options.pathClassFunc ? options.pathClassFunc : function () {
                     return '';
                 }, //Class for each path
-                pathTitleFunc = options.pathTitleFunc ? options.pathTitleFunc : function() {
+                pathTitleFunc = options.pathTitleFunc ? options.pathTitleFunc : function () {
                     return '';
                 }, //Title for each path
                 pieClass = options.pieClass ? options.pieClass : 'marker-cluster-pie', //Class for the whole pie
@@ -263,31 +319,31 @@
         }
 
         /*Function for generating a legend with the same categories as in the clusterPie*/
-        function renderLegend() {
-            var data = d3.entries(metadata.fields[categoryField].lookup),
-                legenddiv = d3.select('body').append('div')
-                .attr('id', 'legend');
+        // function renderLegend() {
+        //     var data = d3.entries(metadata.fields[categoryField].lookup),
+        //         legenddiv = d3.select('body').append('div')
+        //         .attr('id', 'legend');
 
-            var heading = legenddiv.append('div')
-                .classed('legendheading', true)
-                .text(metadata.fields[categoryField].name);
+        //     var heading = legenddiv.append('div')
+        //         .classed('legendheading', true)
+        //         .text(metadata.fields[categoryField].name);
 
-            var legenditems = legenddiv.selectAll('.legenditem')
-                .data(data);
+        //     var legenditems = legenddiv.selectAll('.legenditem')
+        //         .data(data);
 
-            legenditems
-                .enter()
-                .append('div')
-                .attr('class', function(d) {
-                    return 'category-' + d.key;
-                })
-                .classed({
-                    'legenditem': true
-                })
-                .text(function(d) {
-                    return d.value;
-                });
-        }
+        //     legenditems
+        //         .enter()
+        //         .append('div')
+        //         .attr('class', function (d) {
+        //             return 'category-' + d.key;
+        //         })
+        //         .classed({
+        //             'legenditem': true
+        //         })
+        //         .text(function (d) {
+        //             return d.value;
+        //         });
+        // }
 
         /*Helper function*/
         function serializeXmlNode(xmlNode) {
@@ -299,25 +355,200 @@
             return "";
         }
 
-        // filter module
-        var data = ["Outremont", "LaSalle", "Mont-Royal",
-         ""];
+        // =============================   load Choropleth layers (listing, avgPrice, avgReview, avgRate)==========================================
+        function setChoroplethLayer() {
+            d3.json(geojsonNbPath, function (error, data) {
+                if (!error) {
+                    listingLayer = L.geoJson(data, {
+                        style: styleListing,
+                        onEachFeature: onEachFeatureNbChoropleth
+                    });
 
-        var nbfilter = d3.select('#nbfilter')
-            .on('change', onchange)
+                    priceLayer = L.geoJson(data, {
+                        style: stylePrice,
+                        onEachFeature: onEachFeatureNbChoropleth
+                    });
 
-        var options = nbfilter
-            .selectAll('option')
-            .data(data).enter()
-            .append('option')
-            .text(function(d) {
-                return d;
+                    rateLayer = L.geoJson(data, {
+                        style: styleRate,
+                        onEachFeature: onEachFeatureNbChoropleth
+                    });
+
+                    reviewLayer = L.geoJson(data, {
+                        style: styleReview,
+                        onEachFeature: onEachFeatureNbChoropleth
+                    });
+
+                    console.log(Object.keys(airbnbByNbMap).length)
+                } else {
+                    console.log('Could not load data...');
+                }
             });
+        }
 
-        function onchange() {
-            selectValue = d3.select("#nbfilter").property('value')
-            d3.select('body')
-                .append('p')
-                .text(selectValue + ' is the last selected option.')
-        };
+        // set up listing layers feature
+        function styleListing(feature) {
+            return {
+                fillColor: getListingLayerColor(airbnbByNbMap[feature.properties.neighbourhood]["numListing"]),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getListingLayerColor(d) {
+            return d > 1000 ? '#800026' :
+                d > 500 ? '#BD0026' :
+                d > 200 ? '#E31A1C' :
+                d > 100 ? '#FC4E2A' :
+                d > 60 ? '#FD8D3C' :
+                d > 40 ? '#FEB24C' :
+                d > 20 ? '#FED976' :
+                '#FFEDA0';
+        }
+
+        function onEachFeatureNbChoropleth(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: zoomToFeature
+            });
+        }
+
+        // set up price layer feature
+        function stylePrice(feature) {
+            return {
+                fillColor: getPriceLayerColor(airbnbByNbMap[feature.properties.neighbourhood]["avgPrices"]),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getPriceLayerColor(d) {
+            return d > 200 ? '#0066cc' :
+                d > 150 ? '#0080ff' :
+                d > 100 ? '#3399ff' :
+                d > 50 ? '#66b3ff' :
+                '#99ccff';
+        }
+
+        // set up review layer feature
+        function styleReview(feature) {
+            return {
+                fillColor: getReviewLayerColor(airbnbByNbMap[feature.properties.neighbourhood]["avgReviews"]),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getReviewLayerColor(d) {
+            return d > 10 ? '#2db300' :
+                d > 7 ? '#40ff00' :
+                d > 4 ? '#9fff80' :
+                d > 1 ? '#c6ffb3' :
+                '#ecffe6';
+        }
+
+        // set up rating layer feature
+        function styleRate(feature) {
+            return {
+                fillColor: getRatingLayerColor(airbnbByNbMap[feature.properties.neighbourhood]["avgRates"]),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.8
+            };
+        }
+
+        function getRatingLayerColor(d) {
+            return d > 4 ? '#0066cc' :
+                d > 3 ? '#0080ff' :
+                d > 2 ? '#3399ff' :
+                d > 1 ? '#66b3ff' :
+                '#99ccff';
+        }
+
+        // add event listener for radio buttons
+        var dataDim = d3.select("#dimensions")
+        dataDim.on("change", changeIt)
+
+        function changeIt() {
+            if (d3.select('input[name=mode]:checked').attr('value') == 'review') {
+                map.removeLayer(currentLayer);
+                map.removeLayer(markerclusters);
+                reviewLayer.addTo(map);
+                currentLayer = reviewLayer;
+            } else if (d3.select('input[name=mode]:checked').attr('value') == 'listing') {
+                map.removeLayer(currentLayer);
+                map.removeLayer(markerclusters);
+                listingLayer.addTo(map);
+                currentLayer = listingLayer;
+            } else if (d3.select('input[name=mode]:checked').attr('value') == 'rate') {
+                map.removeLayer(currentLayer);
+                map.removeLayer(markerclusters);
+                rateLayer.addTo(map);
+                currentLayer = rateLayer;
+            } else if (d3.select('input[name=mode]:checked').attr('value') == 'price') {
+                map.removeLayer(currentLayer);
+                map.removeLayer(markerclusters);
+                priceLayer.addTo(map);
+                currentLayer = priceLayer;
+            } else {
+                map.removeLayer(currentLayer);
+                normalLayer.addTo(map);
+                map.addLayer(markerclusters);
+                currentLayer = normalLayer;
+            }
+        }
+
+        // =============================   Add info control =================================================
+        function setInfoControlPanel() {
+
+            info.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+                this.update();
+                return this._div;
+            };
+
+            // method that we will use to update the control based on feature properties passed
+            info.update = function (props) {
+                this._div.innerHTML = '<h4>number of listing</h4>' + (props ?
+                    '<b>' + props.neighbourhood + '</b><br />' + airbnbByNbMap[props.neighbourhood][
+                        "numListing"
+                    ] + ' people / mi<sup>2</sup>' :
+                    'Hover over a state');
+            };
+
+            info.addTo(map);
+        }
+
+
+        function setLegendControl() {
+            legend.onAdd = function (map) {
+
+                var div = L.DomUtil.create('div', 'info legend'),
+                    grades = [0, 20, 40, 60, 100, 200, 500, 1000],
+                    labels = [];
+
+                // loop through our density intervals and generate a label with a colored square for each interval
+                for (var i = 0; i < grades.length; i++) {
+                    div.innerHTML +=
+                        '<i style="background:' + getListingLayerColor(grades[i] + 1) + '"></i> ' +
+                        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                }
+
+                return div;
+            };
+
+            legend.addTo(map);
+        }
     </script>
