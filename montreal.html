@@ -57,8 +57,13 @@
         var airbnbByNbMap = new Object();
         var info = L.control();
         var legend = L.control({
-            position: 'bottomright'
+            position: 'bottomleft'
         });
+        var listTypeColorMap = {
+            "Entire Home/apt": "#ff4d4d",
+            "Private Room": "#66ff66",
+            "Shared Room": "#ffff4d"
+        };
 
         //Add basemap
         L.tileLayer(tileServer, {
@@ -487,26 +492,31 @@
                 map.removeLayer(markerclusters);
                 reviewLayer.addTo(map);
                 currentLayer = reviewLayer;
+                legend.update();
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'listing') {
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
                 listingLayer.addTo(map);
                 currentLayer = listingLayer;
+                legend.update();
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'rate') {
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
                 rateLayer.addTo(map);
                 currentLayer = rateLayer;
+                legend.update();
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'price') {
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
                 priceLayer.addTo(map);
                 currentLayer = priceLayer;
+                legend.update();
             } else {
                 map.removeLayer(currentLayer);
                 normalLayer.addTo(map);
                 map.addLayer(markerclusters);
                 currentLayer = normalLayer;
+                legend.update();
             }
         }
 
@@ -521,32 +531,94 @@
 
             // method that we will use to update the control based on feature properties passed
             info.update = function (props) {
-                this._div.innerHTML = '<h4>number of listing</h4>' + (props ?
-                    '<b>' + props.neighbourhood + '</b><br />' + airbnbByNbMap[props.neighbourhood][
-                        "numListing"
-                    ] + ' people / mi<sup>2</sup>' :
-                    'Hover over a state');
-            };
 
+                if (d3.select('input[name=mode]:checked').attr('value') == 'review') {
+                    this._div.innerHTML = '<h4>Average Reviews Number</h4>' + (props ?
+                        '<b>' + props.neighbourhood + '</b><br />' + airbnbByNbMap[props.neighbourhood][
+                            "avgReviews"
+                        ] :
+                        'Hover over a neighbourhood');
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'listing') {
+                    this._div.innerHTML = '<h4>Listing Number</h4>' + (props ?
+                        '<b>' + props.neighbourhood + '</b><br />' + airbnbByNbMap[props.neighbourhood][
+                            "numListing"
+                        ] :
+                        'Hover over a neighbourhood');
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'rate') {
+                    this._div.innerHTML = '<h4>Average Satisfaction Rate</h4>' + (props ?
+                        '<b>' + props.neighbourhood + '</b><br />' + airbnbByNbMap[props.neighbourhood][
+                            "avgRates"
+                        ] :
+                        'Hover over a neighbourhood');
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'price') {
+                    this._div.innerHTML = '<h4>Average Price</h4>' + (props ?
+                        '<b>' + props.neighbourhood + '</b><br />' + '$' + airbnbByNbMap[props.neighbourhood][
+                            "avgPrices"
+                        ] + '/ night' :
+                        'Hover over a neighbourhood');
+                } else {
+                    this._div.innerHTML = '<h4>Heighbourhood</h4>' + (props ?
+                        '<b>' + props.neighbourhood + '</b><br><br>' +
+                        'Listing Number<br>' +
+                        airbnbByNbMap[props.neighbourhood]["numListing"] +
+                        '<br><br>Average Rating<br>' +
+                        airbnbByNbMap[props.neighbourhood]["avgRates"] +
+                        '<br><br>Average Price<br>' +
+                        '$' + airbnbByNbMap[props.neighbourhood]["avgPrices"] + '/ night' +
+                        '<br><br>Average Reviews<br>' +
+                        airbnbByNbMap[props.neighbourhood]["avgReviews"] :
+                        'Hover over a neighbourhood');
+                }
+            };
             info.addTo(map);
         }
 
-
         function setLegendControl() {
             legend.onAdd = function (map) {
+                this.div = L.DomUtil.create('div', 'info legend');
+                this.update();
+                return this.div;
+            };
 
-                var div = L.DomUtil.create('div', 'info legend'),
-                    grades = [0, 20, 40, 60, 100, 200, 500, 1000],
+            legend.update = function () {
+                var grades,
                     labels = [];
-
-                // loop through our density intervals and generate a label with a colored square for each interval
-                for (var i = 0; i < grades.length; i++) {
-                    div.innerHTML +=
-                        '<i style="background:' + getListingLayerColor(grades[i] + 1) + '"></i> ' +
-                        grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                this.div.innerHTML = '';
+                if (d3.select('input[name=mode]:checked').attr('value') == 'listing') {
+                    grades = [0, 20, 40, 60, 100, 200, 500, 1000];
+                    for (var i = 0; i < grades.length; i++) {
+                        this.div.innerHTML +=
+                            '<i style="background:' + getListingLayerColor(grades[i] + 1) + '"></i> ' +
+                            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                    }
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'rate') {
+                    grades = [0, 1, 2, 3, 4];
+                    for (var i = 0; i < grades.length; i++) {
+                        this.div.innerHTML +=
+                            '<i style="background:' + getRatingLayerColor(grades[i] + 1) + '"></i> ' +
+                            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                    }
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'price') {
+                    grades = [0, 50, 100, 150, 200];
+                    for (var i = 0; i < grades.length; i++) {
+                        this.div.innerHTML +=
+                            '<i style="background:' + getPriceLayerColor(grades[i] + 1) + '"></i> ' +
+                            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                    }
+                } else if (d3.select('input[name=mode]:checked').attr('value') == 'review') {
+                    grades = [0, 1, 4, 7, 10];
+                    for (var i = 0; i < grades.length; i++) {
+                        this.div.innerHTML +=
+                            '<i style="background:' + getReviewLayerColor(grades[i] + 1) + '"></i> ' +
+                            grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+                    }
+                } else {
+                    Object.keys(listTypeColorMap).forEach(roomType => {
+                        this.div.innerHTML +=
+                            '<i style="background:' + listTypeColorMap[roomType] + '"></i> ' +
+                            roomType + '<br>';
+                    });
                 }
-
-                return div;
             };
 
             legend.addTo(map);
