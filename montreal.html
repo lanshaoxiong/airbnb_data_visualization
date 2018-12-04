@@ -102,6 +102,10 @@
                 maxClusterRadius: 2 * rmax,
                 iconCreateFunction: defineClusterIcon //this is where the magic happens
             }),
+            neighclusters = L.markerClusterGroup({
+                maxClusterRadius: 2 * rmax,
+                iconCreateFunction: defineClusterIcon //this is where the magic happens
+            }),
             map = L.map('map').setView([45.5017, -73.5673], 10);
 
         // the hashmap to store number of listing, avgPrice, avgReviews, avgRates for each neighborhood.
@@ -171,7 +175,13 @@
         }
 
         function zoomToFeature(e) {
-            map.fitBounds(e.target.getBounds());
+            var layer = e.target;
+            var neighbourhood = layer.feature.properties["neighbourhood"];
+            // console.log(layer.feature.properties["neighbourhood"]);
+            map.fitBounds(layer.getBounds());
+            neigh_markers(neighbourhood, layer);
+            // map.fitBounds(e.target.getBounds());
+            
         }
 
         function onEachFeatureNb(feature, layer) {
@@ -195,6 +205,9 @@
 
         //and the empty markercluster layer
         map.addLayer(markerclusters);
+
+        //and the empty markercluster layer
+        map.addLayer(neighclusters);
 
         //Ready to go, load the geojson
         d3.json(geojsonAirbnbPath, function (error, data) {
@@ -514,6 +527,7 @@
             if (d3.select('input[name=mode]:checked').attr('value') == 'review') {
                 hideDiv();
                 map.removeLayer(addLayerToMap);
+                map.removeLayer(neighclusters);
                 map.setView([45.5017, -73.5673], 10);
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
@@ -523,6 +537,7 @@
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'listing') {
                 hideDiv();
                 map.removeLayer(addLayerToMap);
+                map.removeLayer(neighclusters);
                 map.setView([45.5017, -73.5673], 10);
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
@@ -532,6 +547,7 @@
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'rate') {
                 hideDiv();
                 map.removeLayer(addLayerToMap);
+                map.removeLayer(neighclusters);
                 map.setView([45.5017, -73.5673], 10);
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
@@ -541,6 +557,7 @@
             } else if (d3.select('input[name=mode]:checked').attr('value') == 'price') {
                 hideDiv();
                 map.removeLayer(addLayerToMap);
+                map.removeLayer(neighclusters);
                 map.setView([45.5017, -73.5673], 10);
                 map.removeLayer(currentLayer);
                 map.removeLayer(markerclusters);
@@ -549,6 +566,9 @@
                 legend.update();
             } else {
                 showDiv();
+                map.removeLayer(addLayerToMap);
+                map.removeLayer(neighclusters);
+                map.setView([45.5017, -73.5673], 10);
                 map.removeLayer(currentLayer);
                 normalLayer.addTo(map);
                 map.addLayer(markerclusters);
@@ -722,6 +742,9 @@
                 }
                 if (map.hasLayer(normalLayer)) {
                     normalLayer.bringToBack();
+                }
+                if (map.hasLayer(neighclusters)) {
+                    map.removeLayer(neighclusters);
                 }
                 map.setView(city_coordinates[filterval], 13);
             } else {
