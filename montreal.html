@@ -10,6 +10,7 @@
 </head>
 
 <body>
+    <script src="https://code.jquery.com/jquery-3.1.0.js"></script>
     <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js" charset="utf-8"></script>
     <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-markercluster/v0.4.0/leaflet.markercluster.js'></script>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -26,6 +27,48 @@
         <input type='radio' id="rate" value="rate" name="mode">Rate</input>
     </form>
 
+    <!-- Filter selection -->
+    Neighborhood
+    <select id="filter" name="filter">
+        <option value=""></option>
+        <option value="Montréal">Montréal</option>
+        <option value="Ahuntsic-Cartierville">Ahuntsic-Cartierville</option>
+        <option value="Anjou">Anjou</option>
+        <option value="Baie-d'Urfé">Baie-d'Urfé</option>
+        <option value="Beaconsfield">Beaconsfield</option>
+        <option value="Côte-des-Neiges-Notre-Dame-de-Grâce">Côte-des-Neiges-Notre-Dame-de-Grâce</option>
+        <option value="Côte-Saint-Luc">Côte-Saint-Luc</option>
+        <option value="Dollard-des-Ormeaux">Dollard-des-Ormeaux</option>
+        <option value="Dorval">Dorval</option>
+        <option value="Hampstead">Hampstead</option>
+        <option value="Kirkland">Kirkland</option>
+        <option value="Lachine">Lachine</option>
+        <option value="LaSalle">LaSalle</option>
+        <option value="Le Plateau-Mont-Royal">Le Plateau-Mont-Royal</option>
+        <option value="Le Sud-Ouest">Le Sud-Ouest</option>
+        <option value="L'Île-Bizard-Sainte-Geneviève">L'Île-Bizard-Sainte-Geneviève</option>
+        <option value="L'Île-Dorval">L'Île-Dorval</option>
+        <option value="Mercier-Hochelaga-Maisonneuve">Mercier-Hochelaga-Maisonneuve</option>
+        <option value="Montréal-Est">Montréal-Est</option>
+        <option value="Montréal-Nord">Montréal-Nord</option>
+        <option value="Montréal-Ouest">Montréal-Ouest</option>
+        <option value="Mont-Royal">Mont-Royal</option>
+        <option value="Outremont">Outremont</option>
+        <option value="Pierrefonds-Roxboro">Pierrefonds-Roxboro</option>
+        <option value="Pointe-Claire">Pointe-Claire</option>
+        <option value="Rivière-des-Prairies-Pointe-aux-Trembles">Rivière-des-Prairies-Pointe-aux-Trembles</option>
+        <option value="Rosemont-La Petite-Patrie">Rosemont-La Petite-Patrie</option>
+        <option value="Sainte-Anne-de-Bellevue">Sainte-Anne-de-Bellevue</option>
+        <option value="Saint-Laurent">Saint-Laurent</option>
+        <option value="Saint-Léonard">Saint-Léonard</option>
+        <option value="Senneville">Senneville</option>
+        <option value="Verdun">Verdun</option>
+        <option value="Ville-Marie">Ville-Marie</option>
+        <option value="Villeray-Saint-Michel-Parc-Extension">Villeray-Saint-Michel-Parc-Extension</option>
+        <option value="Westmount">Westmount</option>
+    </select>
+
+
     <script type="text/javascript">
         // map module
         "use strict"
@@ -37,6 +80,7 @@
             listingLayer,
             priceLayer,
             reviewLayer,
+            dataLayerGroup,
             rateLayer,
             currentLayer,
             categoryField = 'room_type', //This is the fieldname for marker category (used in the pie and legend)
@@ -596,4 +640,80 @@
 
             legend.addTo(map);
         }
+
+
+        // ===================================== filter feature ===============================================
+
+
+        //variable to store the value we want to filter out
+        var filterval = document.getElementById("filter").value;
+
+        //variable containing the filter function
+        function colorFilter(feature) {
+            if (feature.properties["neighborhood"] === filterval) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        //define the funtion to add the layer to the map or replace it. 
+        function addLayerToMap() {
+            //remove the layer from the map entirely
+            if (map.hasLayer(dataLayerGroup)) {
+                map.removeLayer(dataLayerGroup);
+            }
+            //add the data layer and style based on attribute. 
+            dataLayerGroup = L.geoJson(geojson, {
+                filter: colorFilter,
+                pointToLayer: function (feature, latlng) {
+                    return new L.CircleMarker(latlng, {
+                        radius: 2
+                    });
+                },
+                onEachFeature: function (feature, layer) {
+                    layer.bindPopup(feature.properties["neighborhood"]);
+                },
+                style: function (feature) {
+                    if (feature.properties[categoryField] === "1") {
+                        return {
+                            color: "#F88"
+                        }
+                    } else if (feature.properties[categoryField] === "2") {
+                        return {
+                            color: "#00ff78"
+                        }
+                    } else {
+                        return {
+                            color: "#FF3"
+                        }
+                    }
+                },
+            }).addTo(map);
+        }
+
+
+        //listener for a filter input: 
+        $("#filter").on("input", function () {
+            filterval = document.getElementById("filter").value;
+            if (filterval !== "Montréal") {
+                if (map.hasLayer(markerclusters)) {
+                    map.removeLayer(markerclusters);
+                }
+                if (map.hasLayer(normalLayer)) {
+                    map.removeLayer(normalLayer);
+                }
+            } else {
+                map.addLayer(markerclusters);
+                map.addLayer(normalLayer);
+            }
+            console.log("the filter was changed to ", filterval);
+
+            //add the layer to the map again, now that we have changed the filter value. 
+            addLayerToMap();
+
+        }); //end listener function 
+
+        //call the funtion to add the layer to the map for the first time (before interacting with the filter). 
+        addLayerToMap();
     </script>
