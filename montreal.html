@@ -163,14 +163,17 @@
                 fillOpacity: 0.7
             });
 
-            // if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-            //     layer.bringToFront();
-            // }
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
             info.update(layer.feature.properties);
         }
 
         function resetHighlight(e) {
             currentLayer.resetStyle(e.target);
+            if (map.hasLayer(dataLayerGroup)) {
+                dataLayerGroup.bringToFront();
+            }
             info.update();
         }
 
@@ -180,6 +183,7 @@
             // console.log(layer.feature.properties["neighbourhood"]);
             map.fitBounds(layer.getBounds());
             neigh_markers(neighbourhood);
+            changeText(neighbourhood);
             // map.fitBounds(e.target.getBounds());
             
         }
@@ -799,6 +803,7 @@
                 }
                 map.setView(city_coordinates[filterval], 13);
             } else {
+                map.removeLayer(neighclusters);
                 map.addLayer(markerclusters);
                 map.setView([45.5017, -73.5673], 10);
             }
@@ -825,5 +830,10 @@
             var y = document.getElementById("filterNone");
             x.style.display = "block";
             y.style.display = "none";
+        }
+
+        function changeText() {
+            x = document.getElementById("filter");
+            x.options[x.selectedIndex].text = "";
         }
     </script>
