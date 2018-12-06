@@ -179,7 +179,7 @@
             var neighbourhood = layer.feature.properties["neighbourhood"];
             // console.log(layer.feature.properties["neighbourhood"]);
             map.fitBounds(layer.getBounds());
-            neigh_markers(neighbourhood, layer);
+            neigh_markers(neighbourhood);
             // map.fitBounds(e.target.getBounds());
             
         }
@@ -206,7 +206,7 @@
         //and the empty markercluster layer
         map.addLayer(markerclusters);
 
-        //and the empty markercluster layer
+        // and the empty markercluster layer
         map.addLayer(neighclusters);
 
         //Ready to go, load the geojson
@@ -240,6 +240,57 @@
                 console.log('Could not load data...');
             }
         });
+
+        //========================================================
+        //========================================================
+        //========================================================
+        //Ready to go, load the geojson
+            function neigh_markers(curr_neigh) {
+                map.addLayer(neighclusters);                
+
+                var geojson1 = JSON.parse(JSON.stringify(geojson));
+                var no_list = geojson1.features.length;
+                var j = 0;
+                if (map.hasLayer(neighclusters)) {
+                    neighclusters.clearLayers();
+                    map.addLayer(neighclusters);
+                    
+                }
+                if (map.hasLayer(dataLayerGroup)) {
+                    map.removeLayer(dataLayerGroup);
+                }
+                
+                for (var i = 0; i < no_list; i++) {
+                    if (geojson.features[i]["properties"]["neighborhood"] !== curr_neigh) {
+                        geojson1.features.splice(j, 1);
+                        j--;
+                    }
+                    j++;
+                }
+                map.removeLayer(markerclusters);
+                var n_markers = L.geoJson(geojson1, {
+                    pointToLayer: defineFeatureNb,
+                    onEachFeature: defineFeaturePopup
+                });
+                
+                neighclusters.addLayer(n_markers);
+            };
+
+            function defineFeatureNb(feature, latlng) {
+                var categoryVal = feature.properties[categoryField];
+                var myClass = 'marker category-' + categoryVal;
+                var myIcon = L.divIcon({
+                    className: myClass,
+                    iconSize: null
+                });
+                return L.marker(latlng, {
+                    icon: myIcon
+                });
+            };
+
+        //========================================================
+        //========================================================
+        //========================================================
 
         function defineFeature(feature, latlng) {
             storeDataByNb(feature);
@@ -688,7 +739,7 @@
         //variable to store the value we want to filter out
         var filterval = document.getElementById("filter").value;
 
-        //variable containing the filter function
+        //variable containing the fi0lter function
         function colorFilter(feature) {
             if (feature.properties["neighborhood"] === filterval) {
                 return true;
@@ -708,7 +759,7 @@
                 filter: colorFilter,
                 pointToLayer: function (feature, latlng) {
                     return new L.CircleMarker(latlng, {
-                        radius: 2,
+                        radius: 3,
                         fillOpacity: 1
                     });
                 },
