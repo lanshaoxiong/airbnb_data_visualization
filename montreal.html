@@ -34,7 +34,7 @@
             <option value=""></option>
     </select>
     <select id="filter" name="filter" style="display: none;">
-        <option value=""></option>
+        <option value="Blank"></option>
         <option value="Montréal">Montréal</option>
         <option value="Ahuntsic-Cartierville">Ahuntsic-Cartierville</option>
         <option value="Anjou">Anjou</option>
@@ -178,12 +178,13 @@
         }
 
         function zoomToFeature(e) {
+            
             var layer = e.target;
             var neighbourhood = layer.feature.properties["neighbourhood"];
             // console.log(layer.feature.properties["neighbourhood"]);
             map.fitBounds(layer.getBounds());
             neigh_markers(neighbourhood);
-            changeText(neighbourhood);
+            changeText();
             // map.fitBounds(e.target.getBounds());
             
         }
@@ -368,7 +369,7 @@
                     },
                     pathTitleFunc: function (d) {
                         return metadata.fields[categoryField].lookup[d.data.key] + ' (' + d.data.values.length +
-                            ' accident' + (d.data.values.length != 1 ? 's' : '') + ')';
+                            ' listing' + (d.data.values.length != 1 ? 's' : '') + ')';
                     }
                 }),
                 //Create a new divIcon and assign the svg markup to the html property
@@ -834,6 +835,7 @@
 
         function changeText() {
             x = document.getElementById("filter");
-            x.options[""];
+            x.value = "Blank";
+            
         }
     </script>
